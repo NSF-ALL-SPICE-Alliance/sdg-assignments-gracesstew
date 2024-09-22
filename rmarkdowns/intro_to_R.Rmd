@@ -303,6 +303,13 @@ What if we want to subset specific rows? We can do this by using the filter func
 #### <span style="color: red;">Challenge 2</span>
 Using the `select()` function, select two new SDG goal scores. Assign it to a variable named `SDG_scores`. 
 
+```{r}
+sdr_data %>%
+  select(goal_1_score, goal_2_score)
+SDG_scores <-
+  c(sdr_data$goal_1_score, sdr_data$goal_2_score)
+```
+
 *2. filter()*
 
 Similarly to select, `filter()` can be used to extract specific rows. Let's try this out by filtering our data for those within the Oceania region.
@@ -322,6 +329,14 @@ Notes:
 
 #### <span style="color: red;">Challenge 3</span>
 Using the `filter()` function, filter for another region other than Oceania. Assign it to a variable named `new_region`. 
+
+```{r}
+sdr_data %>% 
+  filter(regions_used_for_the_sdr == "MENA")
+
+new_region <- sdr_data %>% 
+  filter(regions_used_for_the_sdr == "MENA")
+```
 
 **Important**
 
