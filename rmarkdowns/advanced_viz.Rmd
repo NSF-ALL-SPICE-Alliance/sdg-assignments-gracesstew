@@ -130,8 +130,16 @@ We can also double-click the boxes in the legend to only view the regions we're 
 Here is the code for a scatter plot you made in the last lesson:
 
 ```{r, warning = FALSE}
-ggplot(data = sdr_data, aes(x= goal_3_score, y = goal_4_score, color = regions_used_for_the_sdr)) +
-  geom_point()
+goal_3_plot <- ggplot(data = sdr_data, aes(x= goal_3_score, y = goal_4_score, color = regions_used_for_the_sdr)) +
+  geom_point() +
+  theme_minimal()+
+  scale_fill_viridis_d()+
+  labs(title = "SDG: Goal 3 vs Goal 4 Scores",
+       x = "SDG 3 Score",
+       y = "SDG 4 Score",
+       fill = "Region")
+
+ggplotly(goal_3_plot)
 ```
 
 *Edit the code chunk above* that generates the plot to:
@@ -272,6 +280,16 @@ Can you edit the code chunk above that generates the map to:
 - Change the color palette from "YlOrRd" to another palette
   - Hint: [look under the RColorBrewer Palettes here](https://www.datanovia.com/en/blog/top-r-color-palettes-to-know-for-great-data-visualization/)
     
+```{r}
+mytext <- paste(
+    "Country: ", sdr_data_world_joined$country,"<br/>", 
+    "Goal 1 Score: ", round(sdr_data_world_joined$goal_1_score, 2), 
+    sep="") %>%
+  lapply(htmltools::HTML)
 
-
+leaflet(sdr_data_world_joined) %>% 
+  addTiles()  %>% 
+  setView( lat=10, lng=0 , zoom=2) %>%
+  addPolygons(stroke = FALSE, fillOpacity = 0.5, smoothFactor = 0.5, color = ~colorQuantile("PuRd", goal_1_score)(goal_1_score), label = mytext)
+```
 
