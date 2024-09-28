@@ -29,6 +29,7 @@ library(ggpubr)
 library(janitor)
 library(ggcorrplot)
 library(vembedr)
+library(plotly)
 ```
 
 
@@ -220,3 +221,18 @@ ggplot(sdr_data, aes(x = goal_12_score,
       - are there any points that don't follow the trend (outliers)
         
         - which country(s) are outliers?
+
+```{r, warning=FALSE, message=FALSE}
+goal_3_plot <- ggplot(sdr_data, aes(x = goal_3_score, 
+                     y = goal_1_score,
+                     label = country)) +
+  geom_point() +
+  geom_smooth() +
+  stat_cor() +
+  theme_minimal()
+
+ggplotly(goal_3_plot)
+```
+
+There seems to be a positive correlation between Goal 1 (No Poverty) and Goal 3 (Good Health and Well-Being). Countries that have a higher Goal 1 score, tend to have higher Goal 3 scores. This means that with reduced poverty, healthier lifestyles and improved well-being are likely to be promoted and enforced. This is to be expected as, with more wealth, the more resources there are available for healthier eating, improved medical care, etc.
+There are several countries that are outliers. For example, countries like Malawai and Burundi do not follow this trend. This is evident as both countries have a Goal 1 score of 0 while still maintaining a Goal 3 score around 50.
