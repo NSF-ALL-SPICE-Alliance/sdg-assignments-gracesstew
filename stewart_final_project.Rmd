@@ -1,0 +1,299 @@
+---
+title: "Stewart_Final_Project"
+author: "Grace Stewart"
+date: "2024-10-18"
+output: html_document
+---
+
+# Introduction
+
+Hello! My name is Grace Stewart. I am currently a junior Computer and Data science major at CUH. For my final project for the SDG Analytics in R course, I will be exploring SDG 6: Clean Water and Sanitation. I consider SDG 6 to be an important goal to work towards considering sanitation and hygeine is essential to one's overall health and well being. Without it, it can prove difficult to not only prevent any diseases/illnesses that are water-borne, but also to keep one's body physically healthy.
+
+Through this project, I hope to explore what parts of the world are succeeding or struggling in this goal as well as what factors lead to the overall success of achieving SDG 6: Clean Water and Sanitation.
+
+# Packages
+
+
+We will first load in the Packages that will be used in the analysis, which are listed in the following:
+
+```{r setup, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(here)
+library(janitor)
+library(leaflet)
+library(plotly)
+library(rnaturalearth)
+library(leaflet)
+library(sf)
+library(vembedr)
+library(naniar)
+library(cluster) 
+library(randomForest)
+library(missRanger)
+library(factoextra)
+library(pdp)
+```
+
+
+
+# Data
+
+
+### Reading the data
+
+In this section, we are reading in the SDR 2023 Data.This information is from the [sustainability development report](https://sdgtransformationcenter.org/reports/sustainable-development-report-2023). We will turn this into a variable called "sdr_data".
+```{r, message=FALSE}
+sdr_data <- read_csv(here("data/SDR-2023-Data.csv"))
+```
+### Cleaning
+
+We will then clean the column names of our data frames.
+
+1. Use clean_names() function to tidy up data
+
+```{r}
+sdr_data <- sdr_data %>%
+  clean_names()
+```
+2. Calling head (first 5 rows) of data
+```{r}
+head(sdr_data)
+```
+3. Viewing column names
+- information pertaining to this can be found in the R Studio "Environment" tab.
+
+```{r}
+column_names <- as.list(colnames(sdr_data))
+```
+
+4. Viewing the dimensions (aka how many rows/columns)
+  - from this we observe there are 206 rows and 666 columns.
+
+```{r}
+dim(sdr_data)
+```
+5. Analyzing and cleaning missing data
+```{r}
+sdr_data_normalized_scores <- sdr_data %>% 
+  select(country, contains("normalized_score")) # using the environment tab, we will view the number of cells in the dataframe
+```
+```{r}
+206 * 99 # number of cells in dataframe sdr_data_normalized_scores
+sum(is.na(sdr_data_normalized_scores)) #number of cells that are NA
+(3965/20394)*100 #what percent of data is missing using above information
+```
+- from this we can view that 19% of our data is missing. we will get rid of the missing country data since they will not help our analyses. we will first display a plot with the percentage of NA values for each variable.
+```{r}
+gg_miss_var(sdr_data_normalized_scores, show_pct = TRUE) +
+  theme(axis.text.y = element_text(size = 8)) 
+```
+
+- we will now make a new variable that does not include these countries
+```{r}
+sdr_data_normalized_scores_longer <- sdr_data_normalized_scores %>% 
+  pivot_longer(cols = !country) # pivot longer to make dataframe with country, name, and value columns
+missing_data_by_country <- sdr_data_normalized_scores_longer %>%
+ group_by(country) %>%
+ miss_var_summary() %>% 
+ arrange(desc(pct_miss)) # arranging data from most to least missing
+completely_na_countries  <- missing_data_by_country$country[missing_data_by_country$pct_miss == 100] # NA countries
+sdr_data_normalized_scores_no_na_countries <- sdr_data_normalized_scores %>% 
+  filter(!country %in% completely_na_countries) # making new dataframe without NA countries
+```
+- now we will show the plot again with a line indicating the cutoff
+```{r}
+gg_miss_var(sdr_data_normalized_scores_no_na_countries, show_pct = TRUE) +
+  theme(axis.text.y = element_text(size = 8)) +
+  geom_hline(yintercept = 20, color = "steelblue", linetype = "dashed")
+```
+
+- now we will create our new dataframe
+```{r message=FALSE, results='hide'}
+sdr_data_normalized_scores_less_na <- sdr_data_normalized_scores_no_na_countries %>%
+  select(where(~ sum(is.na(.))/length(.) <= 0.2)) # dataframe that drops variables with >20% of missing data
+sdr_data_imputed <- missRanger(sdr_data_normalized_scores_less_na) # imputing missing data using random forest method
+```
+
+
+- this information will be utilized later in the project!
+
+
+# Visualizations
+
+### Global Distributions of SDG 6
+```{r, message=FALSE, warning=FALSE}
+goal_6_histogram <- ggplot(sdr_data, aes(x = goal_6_score, fill=regions_used_for_the_sdr)) +
+  geom_histogram() +
+  theme_minimal() +
+  scale_fill_viridis_d(option = 'plasma') +
+  labs(title = "Global Distributions of SDG 6 Scores",
+       x = "SDG 6 Score",
+       y = "Number of Countries",
+       fill = "Region")
+
+ggplotly(goal_6_histogram)
+```
+In this visualization, we are viewing the overall distribution of SDG 6 through a histogram. By making the histogram interactive, we are able to closely view the information we are looking for! Each color represents a different region and white squares represent NA values. For example, when you hover over the far right column, you can see that there are a total of 4 countries that have an SDG 6 score above 93%! Using this data, we can observe that a majority of countries with high scores tend to be from the OECD region, aka the Organisation for Economic Co-operation and Development. This is likely attributed to the fact that a majority of these countries are highly developed and technologically advanced. Countries such as the U.S., Japan, and South Korea fall under this category. On the other hand, we can observe that countries in the Sub-Saharan African Region tend to have lower SDG 6 scores. This can likely be due to their limited infrastructure, rapid population growth, and economic constraints to name a few. A combination of these factors creates a less than ideal situation to be able to "compete" with other countries in this goal.
+
+
+### Mapping SDG 6 Scores
+
+Using the package leaflet, we are next going to create an interactive map that will showcase the SDG 6 scores.
+```{r}
+world <- ne_countries(scale = "medium", returnclass = "sf") # creating dataframe "world" using the "rnaturalearth" package
+world <- world %>% 
+  select(name_long, iso_a3, geometry) # shrink the dataframe by using only 3 columns we are interested in
+colnames(sdr_data)[which(colnames(sdr_data) == "country_code_iso3")] <- "iso_a3" # renaming column
+sdr_data_world_joined <- left_join(sdr_data, world, by = "iso_a3") #joining data
+```
+To use leaflet, we must turn our variable "sdr_data_world_joined" from a dataframe to an sf dataframe. This is done in the following code chunk.
+```{r}
+class(sdr_data_world_joined) # checking class, we see it is a dataframe
+sdr_data_world_joined <- st_as_sf(sdr_data_world_joined) # turning it into an sf dataframe
+class(sdr_data_world_joined) # checking class, verifying it changed
+```
+Next, we are going to plot our map. We are first going to change our coordinate reference system (crs) and then generate our map!
+
+```{r}
+sdr_data_world_joined <- st_transform(sdr_data_world_joined, "+proj=longlat +datum=WGS84") #specifying crs, WGS84 is used for a longitude/latitude coordinate system
+mytext <- paste(
+    "Country: ", sdr_data_world_joined$country,"<br/>", 
+    "Goal 6 Score: ", round(sdr_data_world_joined$goal_6_score, 2), 
+    sep="") %>%
+  lapply(htmltools::HTML)
+pal <- colorQuantile("RdPu", sdr_data_world_joined$goal_6_score) # defining color palette
+leaflet(sdr_data_world_joined) %>% 
+  addTiles()  %>% 
+  setView( lat=10, lng=0 , zoom=2) %>%
+  addPolygons(stroke = FALSE, fillOpacity = 0.5, smoothFactor = 0.5, color =  ~pal(goal_6_score), label = mytext
+  ) %>%
+  addLegend(
+    "bottomright", pal = pal, values = ~goal_6_score,
+    title = "Goal 6 Score",
+    opacity = 0.7
+  )
+```
+In this visualization, we are able to see a more detailed view on the information we learned from our previous histogram. While the histogram displays the number of countries per region and their scores, this leaflet map gives a more detailed insight. By referring to the color legend, we can also view where a country's score generally falls under. The darker hue will indicate a higher score whereas a lighter hue will indicate a lower score. In addition, similar to the histogram, NA values are also shown (in gray). For example, if we hover over the country of Brazil, we are able to view its specific SDG 6 score, which was not possible in the histogram. Through viewing the leaflet map we can try observe a visible correlation with each continent and their scores. For instance, we can see that a large majority of North America falls is colored a lighter magenta hue, meaning that they tend to have generally higher scores. In contrast, countries located in Africa tend to generally have lower scores or NA values.This helps reaffirm our conclusions from earlier in which we can attribute this to the amount of resources and technology available to each continent.
+
+### SDG 6's Indicators and Normalized Scores
+When viewing our previously made "sdr_data_imputed" variable through our environment tab in R Studio, we can observe what indicators SDG 6 has. This includes the following:
+
+- normalized_score_sdg6_water
+
+- normalized_score_sdg6_sanita
+
+- normalized_score_sdg6_freshwat
+
+- normalized_score_sdg6_wastewat
+
+- normalized_score_sdg6_scarcew
+
+We will make a variable called "normalized_score_sdg6" containing only these indicators/scores.
+```{r}
+normalized_score_sdg6 <- sdr_data_imputed %>%
+  select(starts_with("normalized_score_sdg6_"))
+print(normalized_score_sdg6)
+```
+
+### Strongest Predictors of SDG 6's Indicators and Normalized Scores (ML)
+
+We will be viewing SDG 6's normalized scores for the indicator Water, Sanitation, and Scarce Water, because I feel they are the most general and relevant indicators that anyone would be able to easily understand.
+
+##### **Water**
+
+- we will first train a random forest model to make predictions of water quality and ask which SDG scores were influential is predicting it.
+```{r}
+rf_water <- randomForest(normalized_score_sdg6_water ~ .,
+                             data = sdr_data_imputed,
+                             importance = TRUE)
+```
+- 87% of variance in the target variance in this indicator is explain by the predictor variables in the model.
+```{r}
+rf_water
+```
+- we will next view the 3 most important variables that contributed to the predictions and graph
+```{r}
+importance_df1 <- as.data.frame(rf_water$importance)
+importance_df1_top_3 <- importance_df1 %>%
+  rownames_to_column(var = "variable") %>%
+  slice_max(n = 3, order_by = `%IncMSE`)
+```
+```{r}
+ggplot(importance_df1_top_3, aes(x = `%IncMSE`, y = reorder(variable, `%IncMSE`))) +
+  geom_bar(stat = "identity", fill = "deepskyblue", color = "black") +
+  theme_minimal() +
+  labs(title = "Most Important Variables in Predicting Water",
+       subtitle = "Top 3",
+       y = "SDG Indicator",
+       x = "Feature Importance (% Increase in Mean Squared Error)")
+```
+
+-We will next take the most important variable that affects each indicator and see how it influences the prediction.
+```{r}
+pdp::partial(rf_water, pred.var = "normalized_score_sdg7_elecac", plot = TRUE)
+```
+
+In graph 1, we see that the top 3 indicators are the following:
+
+1. normalized_score_sdg7_elecac
+2. normalized_score_sdg6_sanita
+3. normalized_score_sdg1_Imicpov
+
+We see that "normalized_score_sdg7_elecac" is water's most important prediction variable. This is SDG 7 indicator electrical access. This is likely because reliable electrical access is important to the management of the water itself. Without proper electrical access, the distribution of and pumping water supply systems rely on electricity to extract groundwater. In addition, the purification process of water require electricity to operate.In the second graph we see a positive correlation between the two. At an "normalized_score_sdg7_elecac" score of roughly 63, "normalized_score_sdg6_water" dramatically increases. This means that with far more advanced electrical access, the more successful this indicator is.
+
+We will continue to do this for the remaining 4 indicators.
+
+##### **Sanitation**
+```{r echo=FALSE}
+rf_sanita <- randomForest(normalized_score_sdg6_sanita ~ .,
+                             data = sdr_data_imputed,
+                             importance = TRUE)
+importance_df2 <- as.data.frame(rf_sanita$importance)
+importance_df2_top_3 <- importance_df2 %>%
+  rownames_to_column(var = "variable") %>%
+  slice_max(n = 3, order_by = `%IncMSE`)
+ggplot(importance_df2_top_3, aes(x = `%IncMSE`, y = reorder(variable, `%IncMSE`))) +
+  geom_bar(stat = "identity", fill = "deepskyblue2", color = "black") +
+  theme_minimal() +
+  labs(title = "Most Important Variables in Predicting Sanitation",
+       subtitle = "Top 3",
+       y = "SDG Indicator",
+       x = "Feature Importance (% Increase in Mean Squared Error)")
+pdp::partial(rf_sanita, pred.var = "normalized_score_sdg7_elecac", plot = TRUE)
+```
+
+In graph 1, we see that the top 3 indicators are the following:
+
+1. normalized_score_sdg6_water
+2. normalized_score_sdg7_elecac
+3. normalized_score_sdg3_u5mort
+
+We see that "normalized_score_sdg6_water" is sanitations's most important prediction variable. This is SDG 6 indicator water quality. This is important because improved water quality leads to a multitude of benefits in waste disposal, disease prevention, and quality of life (all of which fall under sanitation). Ensuring quality and clean water is essential to sanitation, which is reflected in the second graph. Sanitation only increases dramatically at a high "normalized_score_sdg6_water" score (roughly 85). This ties into the previous indicator we viewed, "normalized_score_sdg7_elecac." Not only is it the second most important variable for this indicator, but the most important variable for "normalized_score_sdg6_water." This helps showcase how intertwined all the goals are to a successfully achieving the SDG goals as a whole.
+
+##### **Scarce Water**
+```{r echo=FALSE}
+rf_scarcew <- randomForest(normalized_score_sdg6_scarcew ~ .,
+                             data = sdr_data_imputed,
+                             importance = TRUE)
+importance_df5 <- as.data.frame(rf_scarcew$importance)
+importance_df5_top_3 <- importance_df5 %>%
+  rownames_to_column(var = "variable") %>%
+  slice_max(n = 3, order_by = `%IncMSE`)
+ggplot(importance_df5_top_3, aes(x = `%IncMSE`, y = reorder(variable, `%IncMSE`))) +
+  geom_bar(stat = "identity", fill = "deepskyblue4", color = "black") +
+  theme_minimal() +
+  labs(title = "Most Important Variables in Predicting Water Scarcity",
+       subtitle = "Top 3",
+       y = "SDG Indicator",
+       x = "Feature Importance (% Increase in Mean Squared Error)")
+pdp::partial(rf_scarcew, pred.var = "normalized_score_sdg12_nimport", plot = TRUE)
+```
+
+In graph 1, we see that the top 3 indicators are the following:
+
+1. normalized_score_sdg12_nimport
+2. normalized_score_sdg8_impslav
+3. normalized_score_sdg8_impacc
+
+We see that "normalized_score_sdg12_nimport" is water scarcity's most important prediction variable. This is SDG 12 indicator Material Footprint. This refers to the total amount of materials used in an economy. This is important to water scarcity as it gives insight to whether or not resources are being consumed and used effectively.It is shown to trend positively in our second graph at a "normalized_score_sdg12_nimport" score of 10 This is likely because with basic, responsible consumption of resources, water scarcity is being preserved. With the help of SDG indicator 12.2.1, promotion of responsible and sustainable consumption can help achieve this indicator.
