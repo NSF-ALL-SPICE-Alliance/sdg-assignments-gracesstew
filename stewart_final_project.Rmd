@@ -7,7 +7,7 @@ output: html_document
 
 # Introduction
 
-Hello! My name is Grace Stewart. I am currently a junior Computer and Data science major at CUH. For my final project for the SDG Analytics in R course, I will be exploring SDG 6: Clean Water and Sanitation. I consider SDG 6 to be an important goal to work towards considering sanitation and hygeine is essential to one's overall health and well being. Without it, it can prove difficult to not only prevent any diseases/illnesses that are water-borne, but also to keep one's body physically healthy.
+Hello! My name is Grace Stewart. I am currently a junior Computer and Data science major at CUH. For my final project for the SDG Analytics in R course, I will be exploring SDG 6: Clean Water and Sanitation. I consider SDG 6 to be an important goal to work towards, considering sanitation and hygeine is essential to one's overall health and well being. Without it, it can prove difficult to not only prevent any diseases/illnesses that are water-borne, but also to keep one's body physically healthy.
 
 Through this project, I hope to explore what parts of the world are succeeding or struggling in this goal as well as what factors lead to the overall success of achieving SDG 6: Clean Water and Sanitation.
 
@@ -174,7 +174,7 @@ leaflet(sdr_data_world_joined) %>%
     opacity = 0.7
   )
 ```
-In this visualization, we are able to see a more detailed view on the information we learned from our previous histogram. While the histogram displays the number of countries per region and their scores, this leaflet map gives a more detailed insight. By referring to the color legend, we can also view where a country's score generally falls under. The darker hue will indicate a higher score whereas a lighter hue will indicate a lower score. In addition, similar to the histogram, NA values are also shown (in gray). For example, if we hover over the country of Brazil, we are able to view its specific SDG 6 score, which was not possible in the histogram. Through viewing the leaflet map we can try observe a visible correlation with each continent and their scores. For instance, we can see that a large majority of North America falls is colored a lighter magenta hue, meaning that they tend to have generally higher scores. In contrast, countries located in Africa tend to generally have lower scores or NA values.This helps reaffirm our conclusions from earlier in which we can attribute this to the amount of resources and technology available to each continent.
+In this visualization, we are able to see a more detailed view on the information we learned from our previous histogram. While the histogram displays the number of countries per region and their scores, this leaflet map gives a more detailed insight. By referring to the color legend, we can also view where a country's score generally falls under. The darker hue will indicate a higher score whereas a lighter hue will indicate a lower score. In addition, similar to the histogram, NA values are also shown (in gray). For example, if we hover over the country of Brazil, we are able to view its specific SDG 6 score, which was not possible in the histogram. Through viewing the leaflet map we can try observe a visible correlation with each continent and their scores. For instance, we can see that a large majority of North America is colored a lighter magenta hue, meaning that they tend to have generally higher scores. In contrast, countries located in Africa tend to generally have lower scores or NA values.This helps reaffirm our conclusions from earlier in which we can attribute this to the amount of resources and technology available to each continent.
 
 ### SDG 6's Indicators and Normalized Scores
 When viewing our previously made "sdr_data_imputed" variable through our environment tab in R Studio, we can observe what indicators SDG 6 has. This includes the following:
@@ -189,7 +189,7 @@ When viewing our previously made "sdr_data_imputed" variable through our environ
 
 - normalized_score_sdg6_scarcew
 
-We will make a variable called "normalized_score_sdg6" containing only these indicators/scores.
+We will make a variable called "normalized_score_sdg6" containing only these indicators/scores.This will allow us to easily view only the scores pertaining to SDG 6.
 ```{r}
 normalized_score_sdg6 <- sdr_data_imputed %>%
   select(starts_with("normalized_score_sdg6_"))
@@ -198,7 +198,7 @@ print(normalized_score_sdg6)
 
 ### Strongest Predictors of SDG 6's Indicators and Normalized Scores (ML)
 
-We will be viewing SDG 6's normalized scores for the indicator Water, Sanitation, and Scarce Water, because I feel they are the most general and relevant indicators that anyone would be able to easily understand.
+In order to see what contributes to the success of SDG 6, we will take a closer look at other indicators that are considered to be closely linked through machine learning. More specifically, we will be viewing SDG 6's normalized scores for the indicator Water, Sanitation, and Scarce Water, because I feel they are the most general and relevant indicators that anyone would be able to easily understand.
 
 ##### **Water**
 
@@ -240,9 +240,9 @@ In graph 1, we see that the top 3 indicators are the following:
 2. normalized_score_sdg6_sanita
 3. normalized_score_sdg1_Imicpov
 
-We see that "normalized_score_sdg7_elecac" is water's most important prediction variable. This is SDG 7 indicator electrical access. This is likely because reliable electrical access is important to the management of the water itself. Without proper electrical access, the distribution of and pumping water supply systems rely on electricity to extract groundwater. In addition, the purification process of water require electricity to operate.In the second graph we see a positive correlation between the two. At an "normalized_score_sdg7_elecac" score of roughly 63, "normalized_score_sdg6_water" dramatically increases. This means that with far more advanced electrical access, the more successful this indicator is.
+We see that "normalized_score_sdg7_elecac" is water's most important prediction variable. This is SDG 7 indicator electrical access. This is likely because reliable electrical access is important to the management of the water itself. Without proper electrical access, the distribution of and pumping water supply systems rely on electricity to extract groundwater. In addition, the purification process of water require electricity to operate.In the second graph we see a positive correlation between the two. At a "normalized_score_sdg7_elecac" score of roughly 63, "normalized_score_sdg6_water" dramatically increases. This means that with far more advanced electrical access, the more successful this indicator is.
 
-We will continue to do this for the remaining 4 indicators.
+We will continue to do this process for the remaining 4 indicators.
 
 ##### **Sanitation**
 ```{r echo=FALSE}
@@ -296,4 +296,8 @@ In graph 1, we see that the top 3 indicators are the following:
 2. normalized_score_sdg8_impslav
 3. normalized_score_sdg8_impacc
 
-We see that "normalized_score_sdg12_nimport" is water scarcity's most important prediction variable. This is SDG 12 indicator Material Footprint. This refers to the total amount of materials used in an economy. This is important to water scarcity as it gives insight to whether or not resources are being consumed and used effectively.It is shown to trend positively in our second graph at a "normalized_score_sdg12_nimport" score of 10 This is likely because with basic, responsible consumption of resources, water scarcity is being preserved. With the help of SDG indicator 12.2.1, promotion of responsible and sustainable consumption can help achieve this indicator.
+We see that "normalized_score_sdg12_nimport" is water scarcity's most important prediction variable. This is SDG 12 indicator Material Footprint. This refers to the total amount of materials used in an economy. This is important to water scarcity as it gives insight to whether or not resources are being consumed and used effectively.It is shown to trend positively in our second graph at a "normalized_score_sdg12_nimport" score of 10 This is likely because with basic, responsible consumption of resources, water scarcity is being preserved. With the help of this SDG indicator, promotion of responsible and sustainable consumption can help achieve this indicator.
+
+# Conclusion
+
+My initial goal for this project was to explore SDG 6: Clean Water and Sanitation. Through my research, I was able to determine that the global distribution of SDG 6 scores are very scattered. Overall, the scores ranged from 33-93, with many countries falling in somewhere in the very middle (with scores falling around the 70s). Additionally, looking at our second visual of the globe, we can see a stark contrast between the various continents in their success of achieving this goal. I was also able to explore what factors and other SDG goals contributed to the overall success of SDG 6. I observed that indicators regarding electrical access, water quality, and responsible consumption played a vital role. Taking and using the aforementioned information, we can get a better insight into what places in the world are struggling with this goal as well as what the necessary steps may be in getting closer to achieving SDG 6.
