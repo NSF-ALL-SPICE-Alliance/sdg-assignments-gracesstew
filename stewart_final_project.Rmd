@@ -242,7 +242,7 @@ In graph 1, we see that the top 3 indicators are the following:
 
 We see that "normalized_score_sdg7_elecac" is water's most important prediction variable. This is SDG 7 indicator electrical access. This is likely because reliable electrical access is important to the management of the water itself. Without proper electrical access, the distribution of and pumping water supply systems rely on electricity to extract groundwater. In addition, the purification process of water require electricity to operate.In the second graph we see a positive correlation between the two. At a "normalized_score_sdg7_elecac" score of roughly 63, "normalized_score_sdg6_water" dramatically increases. This means that with far more advanced electrical access, the more successful this indicator is.
 
-We will continue to do this process for the remaining 4 indicators.
+We will continue to do this process for the remaining 2 indicators.
 
 ##### **Sanitation**
 ```{r echo=FALSE}
